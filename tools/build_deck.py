@@ -322,14 +322,14 @@ footer(s)
 # ================================================================ S7 RESULTS
 s = slide()
 header(s, "Proof, not promises", "Five real restaurants · one month · real numbers",
-       sub="All figures computed from each restaurant's own July 2026 Zomato payout + funnel exports.")
+       sub="All figures computed from each restaurant's own July 2026 Zomato payout + funnel exports. Names withheld for confidentiality.")
 rows = [
     ("Restaurant", "Health", "Track", "Orders", "AOV", "Take rate", "ROAS", "Ad dependency"),
-    ("Kubaba", "86", "2 — Growth", "3,749", "₹571", "20.7%", "8.1x", "71%"),
-    ("Lulu Hypermarket", "89", "2 — Growth", "3,220", "₹352", "21.9%", "9.3x", "74%"),
-    ("Palaaram Traditions", "72", "2 — Growth", "2,194", "₹536", "29.7%", "8.0x", "87%"),
-    ("Ming's Wok (Panampilly)", "73", "1 — Optimise", "482", "₹588", "30.5%", "—", "—"),
-    ("Ming's Wok (Kakkanad)", "86", "1 — Optimise", "580", "₹736", "30.6%", "—", "—"),
+    ("Restaurant A", "86", "2 — Growth", "3,749", "₹571", "20.7%", "8.1x", "71%"),
+    ("Restaurant B", "72", "2 — Growth", "2,194", "₹536", "29.7%", "8.0x", "87%"),
+    ("Restaurant C", "89", "2 — Growth", "3,220", "₹352", "21.9%", "9.3x", "74%"),
+    ("Restaurant D", "73", "1 — Optimise", "482", "₹588", "30.5%", "—", "—"),
+    ("Restaurant E", "86", "1 — Optimise", "580", "₹736", "30.6%", "—", "—"),
 ]
 tbl_shape = s.shapes.add_table(len(rows), len(rows[0]), Inches(0.55), Inches(1.95),
                                Inches(12.25), Inches(3.6))
@@ -374,9 +374,9 @@ text(s, 0.55, 5.85, 12.2, 0.4,
      size=13, color=NAVY, bold=True)
 footer(s)
 
-# ================================================================ S8 KUBABA
+# ================================================================ S8 CASE A
 s = slide()
-header(s, "Case study · Track 2", "Kubaba — health 86. Ads work. Dependency is the risk.")
+header(s, "Case study · Track 2", "Restaurant A — health 86. Ads work. Dependency is the risk.")
 for i, (lab, val, sub) in enumerate([
     ("Sales (menu value)", "₹2.14M", "July 2026"),
     ("Orders", "3,749", "₹571 average"),
@@ -395,9 +395,9 @@ card(s, 6.85, 5.1, 5.95, 1.7, "P1 — next 30 days", title_color=ORANGE,
           "fix cart abandonment (19% cart-to-order).")
 footer(s)
 
-# ================================================================ S9 PALAARAM
+# ================================================================ S9 CASE B
 s = slide()
-header(s, "Case study · Track 2 at risk", "Palaaram — health 72. Great ROAS, dangerous dependency.")
+header(s, "Case study · Track 2 at risk", "Restaurant B — health 72. Great ROAS, dangerous dependency.")
 for i, (lab, val, sub) in enumerate([
     ("Sales (menu value)", "₹1.18M", "July 2026"),
     ("Orders", "2,194", "₹536 average"),
