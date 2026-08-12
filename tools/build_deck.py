@@ -120,9 +120,20 @@ s = slide()
 rect(s, 0, 0, 13.333, 7.5, NAVY_D)
 rect(s, 0, 0, 13.333, 0.12, ORANGE)
 rect(s, 10.0, 0, 3.33, 7.5, NAVY)
-text(s, 0.9, 0.75, 6.0, 0.5, "SCALE PLATES", size=30, color=WHITE, bold=True)
-text(s, 0.92, 1.25, 6.0, 0.3, "WE HELP RESTAURANTS MAKE MORE MONEY", size=11, color=ORANGE, bold=True)
-text(s, 0.9, 2.5, 8.8, 1.6, [
+_LOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pitch", "logo_transparent.png")
+if os.path.exists(_LOGO):
+    # white rounded badge so the dark logo reads on the navy background
+    badge = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(0.45), Inches(1.75), Inches(1.75))
+    badge.adjustments[0] = 0.12
+    badge.fill.solid()
+    badge.fill.fore_color.rgb = WHITE
+    badge.line.fill.background()
+    badge.shadow.inherit = False
+    s.shapes.add_picture(_LOGO, Inches(0.92), Inches(0.57), Inches(1.5), Inches(1.5))
+else:
+    text(s, 0.9, 0.75, 6.0, 0.5, "SCALE PLATES", size=30, color=WHITE, bold=True)
+text(s, 0.92, 2.45, 6.0, 0.3, "WE HELP RESTAURANTS MAKE MORE MONEY", size=11, color=ORANGE, bold=True)
+text(s, 0.9, 2.95, 8.8, 1.6, [
     [("More money.", {"size": 52, "color": WHITE, "bold": True})],
     [("Same kitchen.", {"size": 52, "color": GOLD, "bold": True})],
 ], spacing=1.0)
