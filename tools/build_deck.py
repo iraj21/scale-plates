@@ -116,12 +116,38 @@ def big_panel(s, x, y, w, h, fill):
 
 
 # ================================================================ 01 TITLE
+_LOGO_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pitch", "logo.jpeg")
+_LOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pitch", "logo_transparent.png")
+
+
+def _make_transparent_logo():
+    """Convert logo.jpeg (white bg) -> logo_transparent.png at build time."""
+    if os.path.exists(_LOGO):
+        return True
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    if not os.path.exists(_LOGO_SRC):
+        return False
+    im = Image.open(_LOGO_SRC).convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if r > 235 and g > 235 and b > 235:
+                px[x, y] = (r, g, b, 0)
+    im.save(_LOGO)
+    return True
+
+
+# ================================================================ 01 TITLE
 s = slide()
 rect(s, 0, 0, 13.333, 7.5, NAVY_D)
 rect(s, 0, 0, 13.333, 0.12, ORANGE)
 rect(s, 10.0, 0, 3.33, 7.5, NAVY)
-_LOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pitch", "logo_transparent.png")
-if os.path.exists(_LOGO):
+if _make_transparent_logo():
     # white rounded badge so the dark logo reads on the navy background
     badge = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(0.45), Inches(1.75), Inches(1.75))
     badge.adjustments[0] = 0.12
@@ -132,12 +158,12 @@ if os.path.exists(_LOGO):
     s.shapes.add_picture(_LOGO, Inches(0.92), Inches(0.57), Inches(1.5), Inches(1.5))
 else:
     text(s, 0.9, 0.75, 6.0, 0.5, "SCALE PLATES", size=30, color=WHITE, bold=True)
-text(s, 0.92, 2.45, 6.0, 0.3, "WE HELP RESTAURANTS MAKE MORE MONEY", size=11, color=ORANGE, bold=True)
-text(s, 0.9, 2.95, 8.8, 1.6, [
+text(s, 0.92, 2.35, 6.0, 0.3, "WE HELP RESTAURANTS MAKE MORE MONEY", size=11, color=ORANGE, bold=True)
+text(s, 0.9, 2.75, 8.8, 1.6, [
     [("More money.", {"size": 52, "color": WHITE, "bold": True})],
     [("Same kitchen.", {"size": 52, "color": GOLD, "bold": True})],
 ], spacing=1.0)
-text(s, 0.9, 4.35, 8.2, 0.9,
+text(s, 0.9, 4.55, 8.2, 0.9,
      "We read your Zomato and Swiggy reports, and show you where your money is going — "
      "and how to keep more of it. Your food does not change.", size=16, color=BLUE1)
 big_panel(s, 10.55, 2.0, 2.3, 3.4, NAVY2)
@@ -271,26 +297,26 @@ y = 2.37
 for b in data_pts:
     dot(s, 0.9, y + 0.05, ORANGE)
     text(s, 1.2, y, 4.8, 0.7, b, size=12.5, color=INK)
-    y += 0.78
-text(s, 0.85, 5.6, 5.0, 0.7,
+    y += 0.64
+text(s, 0.85, 5.7, 5.0, 0.7,
      "We also use views, ratings, reviews and your billing data where available.", size=11, color=GREY)
 big_panel(s, 6.5, 1.5, 6.3, 4.9, CARD)
 text(s, 6.85, 1.8, 5.6, 0.4, "YOU GET A HEALTH SCORE (0–100)", size=12, color=ORANGE, bold=True)
-text(s, 6.85, 2.2, 2.2, 1.0, "86", size=54, color=NAVY, bold=True)
-text(s, 8.9, 2.5, 3.6, 0.5, "out of 100\nYour overall health", size=12, color=GREY)
+text(s, 6.85, 2.25, 2.2, 0.9, "86", size=54, color=NAVY, bold=True)
+text(s, 9.0, 2.62, 3.6, 0.5, "out of 100\nYour overall health", size=12, color=GREY)
 dials = [
     ("Revenue", 98, GREEN), ("Ads", 68, ORANGE), ("Pricing", 88, GREEN),
     ("Menu / Radius", 100, GREEN), ("Operations", 98, GREEN), ("Profitability", 100, GREEN),
     ("Repeat", 100, GREEN), ("Rating", 92, GREEN),
 ]
-y = 3.25
+y = 3.18
 for lab, val, col in dials:
     text(s, 6.85, y, 2.4, 0.3, lab, size=11, color=INK, bold=True)
     rect(s, 9.0, y + 0.03, 3.3, 0.22, TRACK_BG)
     rect(s, 9.0, y + 0.03, 3.3 * val / 100, 0.22, col)
     text(s, 12.35, y, 0.45, 0.3, str(val), size=11, color=INK, align=PP_ALIGN.RIGHT)
-    y += 0.38
-text(s, 6.85, y + 0.02, 5.6, 0.6, "Red dial = money going out. That is where we start.",
+    y += 0.31
+text(s, 6.85, y + 0.04, 5.6, 0.6, "Red dial = money going out. That is where we start.",
      size=12, color=RED, bold=True)
 text(s, 0.55, 6.62, 12.2, 0.3,
      "These scores are from a real restaurant's data — see Slide 10.", size=10.5, color=GREY)
