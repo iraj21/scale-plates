@@ -112,7 +112,10 @@ def health_score(k):
         ads = max(0, ads - (k["ad_dependency_pct"] - 50) * 1.5)
     revenue = 0.5 * min(100, k["orders"] / 30 / 15 * 100) + 0.5 * min(100, k["aov"] / 600 * 100)
     pricing = min(100, k["aov"] / 650 * 100)
-    coupons = 100 if k["discount_rate"] == 0 else max(0, 100 - k["discount_rate"] * 3000)
+    # Coupons = discount discipline: 100 at no merchant discounts, 0 at 20%+
+    # of sales discounted. Graduated (was 100 - disc*3000, which zeroed any
+    # restaurant above ~3.3% discount and made the dial binary). [heuristic]
+    coupons = 100 if k["discount_rate"] == 0 else max(0, 100 * (1 - k["discount_rate"] / 0.20))
     menu_radius = max(0, 100 - k["ld_exposure"] * 100)
     ops = max(0, 100 - k["cancel_rate"] * 200)
     profit = min(100, max(0, 100 - (k["take_rate"] * 100 - 25) * 8))

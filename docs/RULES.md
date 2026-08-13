@@ -75,7 +75,7 @@ given the ingest layer feeds correct numbers.
 | Ads | no spend → 60; else min(100, ROAS/4×100); if ad_dependency>50 → −(dep−50)×1.5 | [heuristic] 4x target | MED: 4x is a heuristic; dep penalty tuned by eye |
 | Revenue | 0.5×min(100, orders/30/15×100) + 0.5×min(100, AOV/600×100) | 15 orders/day = 100 | MED: 15/day & ₹600 are [corpus]-ish anchors |
 | Pricing | min(100, AOV/650×100) | ₹650 ≈ good AOV | MED: 650 is a mid-market anchor, not data-derived |
-| Coupons | no discount → 100; else max(0, 100 − discount_rate×3000) | [heuristic] | MED: 3000 multiplier arbitrary |
+| Coupons | no discount → 100; else max(0, 100×(1 − discount_rate/0.20)) | [heuristic] graduated (was 100 − disc×3000, which zeroed anything above ~3.3%) | LOW |
 | Menu/Radius | max(0, 100 − ld_exposure×100) | [heuristic] | LOW |
 | Operations | max(0, 100 − cancel_rate×200) | [heuristic] 2% cancel ≈ 96 | LOW |
 | Profitability | min(100, max(0, 100 − (take_rate%−25)×8)) | 25% take rate = 100 | MED: 25% anchor [benchmark] (corpus mean ≈ 19–21%) |
