@@ -24,9 +24,19 @@ from sp.insights import generate, actionables
 from sp.report import render
 
 
+def month_label(month):
+    """'2026-07' -> 'July 2026'."""
+    try:
+        import datetime as _dt
+        return _dt.datetime.strptime(month, "%Y-%m").strftime("%B %Y")
+    except Exception:
+        return month
+
+
 def analyze_uploads(payout_files, funnel_files):
     """payout_files/funnel_files: list of (filename, bytes). Returns list of
-    report dicts (one per restaurant) for the LATEST month, plus warnings."""
+    report dicts (one per restaurant), each with KPIs for the LATEST month plus
+    a 'series' of per-month snapshots for trend charts, plus warnings."""
     tmp = tempfile.mkdtemp(prefix="sp_ui_")
     warnings = []
     seen_warnings = set()
@@ -82,12 +92,29 @@ def analyze_uploads(payout_files, funnel_files):
             latest = entries[-1]
             k = kpis(latest["payout"], latest["funnel"])
             ins = generate(latest, entries[-2] if len(entries) > 1 else None)
+            series = []
+            for e in entries:
+                ek = kpis(e["payout"], e["funnel"])
+                eh = health_score(ek)
+                series.append({
+                    "month": e["month"],
+                    "month_label": month_label(e["month"]),
+                    "orders": ek["orders"], "funnel_orders": ek["funnel_orders"],
+                    "subtotal": ek["subtotal"], "aov": ek["aov"],
+                    "order_payout": ek["order_payout"], "take_rate": ek["take_rate"] * 100,
+                    "ad_spend": ek["ad_spend"], "roas": ek["roas"],
+                    "ad_dependency_pct": ek["ad_dependency_pct"],
+                    "repeat_rate_pct": ek["repeat_rate_pct"], "rating": ek["rating"],
+                    "health": eh["overall"], "track": track(ek),
+                })
             reports.append({
                 "restaurant": latest["restaurant"], "res_id": latest["res_id"],
                 "city": latest["city"], "platform": "ZOMATO", "month": latest["month"],
+                "month_label": month_label(latest["month"]),
                 "kpis": k, "mom": mom(latest, entries[-2]) if len(entries) > 1 else None,
                 "health": health_score(k), "track": track(k),
                 "insights": ins, "actionables": actionables(ins),
+                "series": series,
                 "prior_months_used": [e["month"] for e in entries[:-1]],
             })
         return reports, warnings

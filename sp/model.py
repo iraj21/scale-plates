@@ -9,17 +9,26 @@ import math
 
 
 def kpis(payout, funnel):
-    """payout/funnel: normalized monthly dicts (may be None). Returns KPI dict."""
+    """payout/funnel: normalized monthly dicts (may be None). Returns KPI dict.
+
+    Money-layer metrics (orders, subtotal, AOV, take rate, payout) come from
+    the PAYOUT — it is the settlement source of truth. Demand-layer metrics
+    (ad dependency, repeat, ratings, funnel steps) come from the FUNNEL and
+    use the funnel's own order count, so every ratio is internally consistent.
+    """
     p = payout or {}
     f = funnel or {}
-    orders = f.get("orders") or p.get("orders") or 0
+    orders = p.get("orders") or f.get("orders") or 0
+    funnel_orders = f.get("orders") or 0
     subtotal = p.get("subtotal") or f.get("sales") or 0
     nov = p.get("nov") or 0
     fees = (p.get("commission", 0) + p.get("dist_fee", 0) + p.get("payment_mech", 0)
             + p.get("tax_on_fees", 0) + p.get("tds", 0))
     ad_spend = f.get("ad_spend") or p.get("ad_spend_deductions") or 0
+    promo_spend = p.get("promo_disc", 0) + p.get("bogo_disc", 0)
     return {
         "orders": orders,
+        "funnel_orders": funnel_orders,
         "cancellations": p.get("cancelled", 0),
         "subtotal": subtotal,
         "net_order_value": nov,
@@ -33,6 +42,10 @@ def kpis(payout, funnel):
         "cancel_rate": p.get("cancelled", 0) / (orders + p.get("cancelled", 0)) if (orders + p.get("cancelled", 0)) else 0,
         "zero_order_days": p.get("zero_order_days", 0),
         "dinner_window_pct": p.get("dinner_pct", 0) / 100,
+        # ---- promos (money layer) ----
+        "promo_spend": promo_spend,
+        "promo_orders": p.get("promo_orders", 0),
+        "promo_share_pct": p.get("promo_share_pct", 0),
         # ---- ads (funnel is authoritative) ----
         "ad_spend": ad_spend,
         "ad_attributed_sales": f.get("sales_from_ads", 0),
@@ -43,7 +56,7 @@ def kpis(payout, funnel):
         "ad_ctr_pct": f.get("ctr_pct", 0),
         "net_settled": p.get("payout", 0) - ad_spend,
         "leakage": fees + ad_spend,
-        # ---- demand / experience ----
+        # ---- demand / experience (funnel) ----
         "repeat_rate_pct": f.get("repeat_rate_pct", 0),
         "new_pct": f.get("new_pct", 0),
         "lapsed_pct": f.get("lapsed_pct", 0),

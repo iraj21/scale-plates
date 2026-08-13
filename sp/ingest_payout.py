@@ -183,7 +183,9 @@ def scan_payout(path):
     if t["orders"] == 0:
         return None
 
-    # real ad spend from Addition Deductions Details
+    # real ad spend from Addition Deductions Details: only SETTLED rows count.
+    # Pending rows (last week of the month) are not yet deducted; including them
+    # overstates ad spend vs the funnel 'Ads spend (Rs)' figure (~20% higher).
     ad_spend = 0.0
     ad_lines = 0
     try:
@@ -192,6 +194,9 @@ def scan_payout(path):
             ws2 = wb2["Addition Deductions Details"]
             for row in ws2.iter_rows(values_only=True):
                 if row and len(row) > 6 and row[1] and str(row[1]).strip().upper() == "ADS":
+                    status = str(row[5] or "").strip().lower()
+                    if status and status != "settled":
+                        continue
                     try:
                         ad_spend += float(row[6] or 0)
                     except (TypeError, ValueError, IndexError):

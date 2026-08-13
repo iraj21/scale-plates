@@ -16,11 +16,21 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
+import pandas as pd
+import altair as alt
 
 from ui.analyze import analyze_uploads
 from sp.report import render
 
 st.set_page_config(page_title="Scale Plates", page_icon="🍽️", layout="wide")
+
+
+def divider():
+    """Version-robust divider (st.divider added in streamlit 1.16)."""
+    try:
+        st.divider()
+    except AttributeError:
+        st.markdown("---")
 
 NAVY = "#1F4E79"
 ORANGE = "#E67E22"
@@ -61,7 +71,7 @@ with st.sidebar:
     funnel_files = st.file_uploader("Funnel CSV(s) — daily business report",
                                     type=["csv"], accept_multiple_files=True,
                                     key="funnel")
-    run = st.button("Analyze", type="primary", use_container_width=True)
+    run = st.button("Analyze")
     st.caption("Upload multiple months — each file may span several months.")
 
 if not run:
@@ -101,8 +111,8 @@ h = r["health"]
 c1, c2, c3 = st.columns([2, 1, 2])
 with c1:
     st.markdown(f"### {r['restaurant']}")
-    st.caption(f"Res ID {r['res_id']} · {r['city'] or '—'} · {r['month']} · prior months used: "
-               f"{r['prior_months_used'] or 'none'}")
+    st.caption(f"Res ID {r['res_id']} · {r['city'] or '—'} · reporting month: **{r['month_label']}**"
+               f"{(' · prior: ' + ', '.join(r['prior_months_used'])) if r['prior_months_used'] else ''}")
 with c2:
     col = GREEN if h["overall"] >= 75 else (ORANGE if h["overall"] >= 60 else RED)
     st.markdown(f'<div class="sp-health" style="color:{col}">{h["overall"]}</div>'
@@ -112,7 +122,7 @@ with c3:
                 unsafe_allow_html=True)
     st.markdown(r["track"].split(" — ")[1] if " — " in r["track"] else r["track"])
 
-st.divider()
+divider()
 
 # ---------- health dials ----------
 st.markdown("#### Health sub-dials")
@@ -126,7 +136,7 @@ for i, (name, val) in enumerate(h["subs"].items()):
 # ---------- key numbers ----------
 st.markdown("#### Key numbers")
 metrics = [
-    ("Orders", f"{int(k['orders']):,}"),
+    ("Orders (settled)", f"{int(k['orders']):,}"),
     ("Avg order size", f"₹{k['aov']:,.0f}"),
     ("Sales (menu value)", f"₹{k['subtotal']:,.0f}"),
     ("You received", f"₹{k['order_payout']:,.0f}"),
@@ -134,17 +144,58 @@ metrics = [
     ("Ad spend", f"₹{k['ad_spend']:,.0f}"),
     ("Ad return (ROAS)", f"{k['roas']:.1f}x" if k["roas"] else "—"),
     ("Orders from ads", f"{k['ad_dependency_pct']:.0f}%"),
+    ("Promo spend", f"₹{k['promo_spend']:,.0f}"),
+    ("Orders with promos", f"{k['promo_share_pct']:.0f}%" if k["promo_share_pct"] else "—"),
+    ("Discount rate", f"{k['discount_rate']*100:.1f}%"),
     ("Repeat customers", f"{k['repeat_rate_pct']:.0f}%" if k["repeat_rate_pct"] else "—"),
     ("Rating", f"{k['rating']:.2f}" if k["rating"] else "—"),
     ("Cancellations", f"{k['cancel_rate']*100:.1f}%"),
     ("Zero-order days", f"{int(k['zero_order_days'])}"),
 ]
-for i in range(0, len(metrics), 4):
-    cols = st.columns(4)
-    for c, (label, val) in zip(cols, metrics[i:i + 4]):
+for i in range(0, len(metrics), 5):
+    cols = st.columns(5)
+    for c, (label, val) in zip(cols, metrics[i:i + 5]):
         with c:
             st.markdown(f'<div class="sp-kpi-label">{label}</div>'
                         f'<div class="sp-kpi-val">{val}</div>', unsafe_allow_html=True)
+
+# ---------- trend chart ----------
+if len(r["series"]) > 1:
+    st.markdown("#### Trend across months")
+    df = pd.DataFrame(r["series"]).copy()
+    last_month = df["month"].max()
+    df["highlight"] = df["month"].apply(lambda m: "This month" if m == last_month else "Earlier")
+    chart_h = max(180, min(320, 90 + 40 * len(df)))  # grows a little with month count, capped
+
+    charts = [
+        ("Orders (settled)", "orders", "orders", "Q"),
+        ("Sales (menu value)", "subtotal", "₹", "Q"),
+        ("Avg order size (₹)", "aov", "", "Q"),
+        ("Ad return (ROAS ×)", "roas", "", "Q"),
+    ]
+    ccols = st.columns(2)
+    for idx, (title, col, prefix, fmt) in enumerate(charts):
+        src = df[["month_label", col, "highlight"]].rename(columns={"month_label": "Month", col: "value"})
+        bar = alt.Chart(src).mark_bar(size=30 if len(df) <= 4 else 18).encode(
+            x=alt.X("Month:N", sort=list(df["month"]), title=None),
+            y=alt.Y("value:Q", title=None),
+            color=alt.Color("highlight:N",
+                            scale=alt.Scale(domain=["Earlier", "This month"],
+                                            range=["#B8C7D8", "#E67E22"]),
+                            legend=None),
+            tooltip=["Month", "value"],
+        )
+        text_layer = alt.Chart(src).mark_text(dy=-6, size=11).encode(
+            x=alt.X("Month:N", sort=list(df["month"])),
+            y=alt.Y("value:Q", title=None),
+            text=alt.Text("value:Q", format=",.0f" if prefix != "₹" else ",.0f"),
+        )
+        with ccols[idx % 2]:
+            st.markdown(f"**{title}**" + (f" — this month highlighted in orange" if idx == 0 else ""))
+            st.altair_chart((bar + text_layer).properties(height=chart_h, width="container"),
+                            use_container_width=True)
+else:
+    st.caption(f"One month of data loaded ({r['month_label']}). Upload more months to see trends.")
 
 if r["mom"]:
     st.markdown("#### vs last month")
@@ -167,7 +218,7 @@ if r["mom"]:
             st.markdown(f'<div class="sp-kpi-label">{label}</div>'
                         f'<div class="sp-kpi-val">{txt}</div>', unsafe_allow_html=True)
 
-st.divider()
+divider()
 
 # ---------- insights ----------
 st.markdown("#### Insights & action items")
@@ -188,7 +239,7 @@ for it in r["insights"]:
         )
         st.write("")
 
-st.divider()
+divider()
 
 # ---------- export ----------
 md = render(r)
