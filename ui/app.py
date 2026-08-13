@@ -104,6 +104,19 @@ if len(reports) > 1:
 else:
     r = reports[0]
 
+# ---- compatibility: never crash on older/missing report fields ----
+r.setdefault("month_label", r.get("month", ""))
+r.setdefault("prior_months_used", [])
+r.setdefault("series", [])
+r.setdefault("city", "")
+r.setdefault("mom", None)
+if not r.get("series") and r.get("month"):
+    r["series"] = [{
+        "month": r["month"], "month_label": r["month_label"],
+        "orders": r["kpis"]["orders"], "subtotal": r["kpis"]["subtotal"],
+        "aov": r["kpis"]["aov"], "roas": r["kpis"]["roas"],
+    }]
+
 k = r["kpis"]
 h = r["health"]
 
@@ -163,6 +176,8 @@ for i in range(0, len(metrics), 5):
 if len(r["series"]) > 1:
     st.markdown("#### Trend across months")
     df = pd.DataFrame(r["series"]).copy()
+    df["month"] = df["month"].astype(str)
+    df["month_label"] = df.get("month_label", df["month"]).fillna(df["month"])
     last_month = df["month"].max()
     df["highlight"] = df["month"].apply(lambda m: "This month" if m == last_month else "Earlier")
     chart_h = max(180, min(320, 90 + 40 * len(df)))  # grows a little with month count, capped
