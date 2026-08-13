@@ -59,12 +59,35 @@ def generate(cur, prev):
             "Treat reported ROAS as gross, not incremental. Verify with a holdout test before scaling spend.",
             0, "High", "P1")
 
+    # Cannibalization: strong organic funnel (high rating + high m2c) with high
+    # ad dependency -> ads are crediting demand that would come anyway.
+    # Correlations (9-month corpus): ad_dep~rating +0.68, ad_dep~roas +0.60,
+    # m2c high where ad_dep high for Palaaram/Kubaba. [correlation]
+    if (k["ad_dependency_pct"] >= 60 and k["rating"] >= 4.1 and k["m2c_pct"] >= 25
+            and k["roas"] >= 6):
+        add("AD9", "Ads", "Ads may be taking credit for organic demand",
+            f"{k['ad_dependency_pct']:.0f}% of orders come from ads, yet the restaurant already converts "
+            f"well on its own (rating {k['rating']:.2f}, menu-to-cart {k['m2c_pct']:.0f}%). "
+            f"The {k['roas']:.1f}x return is probably inflated by orders that would come anyway.",
+            "Run a holdout test (pause ads in one window, watch organic) before scaling spend. "
+            "Shift budget toward repeat customers and rating.",
+            k["net_settled"] * 0.15, "Medium", "P1")
+
     # ---- RETENTION ----
     if k["repeat_rate_pct"] > 0 and k["repeat_rate_pct"] < 40:
         add("RE6", "Revenue", "Repeat rate is weak",
             f"Repeat users are {k['repeat_rate_pct']:.0f}% of orders — retention is low.",
             "Add a repeat-customer offer and a loyalty nudge to lift return rate.",
             k["net_settled"] * 0.05, "Medium", "P1")
+
+    # Ads renting customers: heavy ad dependency with no retention being built.
+    # Corpus: Kubaba/Lulu (ad_dep 63-74%, repeat 38-45%, new 39-48%). [correlation]
+    if k["ad_dependency_pct"] >= 50 and 0 < k["repeat_rate_pct"] < 45 and k["new_pct"] >= 40:
+        add("RE7", "Revenue", "Ads are renting customers, not building any",
+            f"{k['ad_dependency_pct']:.0f}% of orders come from ads, {k['new_pct']:.0f}% are new users, "
+            f"but only {k['repeat_rate_pct']:.0f}% come back.",
+            "Add a repeat offer and loyalty nudge now — otherwise ad pause means revenue pause.",
+            k["net_settled"] * 0.08, "Medium", "P1")
 
     # ---- EXPERIENCE ----
     if k["rating"] > 0 and k["rating"] < 4.2:
@@ -82,6 +105,13 @@ def generate(cur, prev):
             f"{k['bad_order_pct']:.0f}% of orders are rated bad.",
             "Find the top reason (delay, quality, wrong item) and fix it this week.",
             k["lost_sales"], "Medium", "P1")
+    # Slow kitchen -> bad orders (corr +0.90 in corpus). [correlation]
+    if k["kpt_min"] >= 20 and k["bad_order_pct"] >= 10:
+        add("OP6", "Operations", "Kitchen prep time is hurting quality",
+            f"KPT {k['kpt_min']:.0f} min with {k['bad_order_pct']:.0f}% bad orders — slow prep and bad "
+            f"orders move together.",
+            "Cut prep time (pre-prep, station layout, order batching) — it directly lowers bad orders.",
+            k["lost_sales"] * 0.5, "Medium", "P1")
 
     # ---- FEES / LEAKAGE ----
     if k["ld_exposure"] > 0.35:
@@ -99,6 +129,15 @@ def generate(cur, prev):
             f"Merchant-funded discounts are {k['discount_rate']*100:.1f}% of sales.",
             "Shift to platform-funded offers; never discount your own margin.",
             k["subtotal"] * k["discount_rate"] * 0.5, "Medium", "P1")
+    # Discounts not building loyalty: heavy discounting with weak repeat.
+    # Corpus: discount 9-13% restaurants keep repeat 38-50%; Lulu (no discounts)
+    # keeps 44-45% with zero promo spend. [correlation]
+    if k["discount_rate"] >= 0.08 and 0 < k["repeat_rate_pct"] < 45:
+        add("FE4", "Fees", "Discounts are not buying loyalty",
+            f"Discounts are {k['discount_rate']*100:.0f}% of sales but repeat is only "
+            f"{k['repeat_rate_pct']:.0f}% — the discount is not bringing customers back.",
+            "Convert discount spend into a repeat-customer offer; cut blanket promos.",
+            k["subtotal"] * k["discount_rate"] * 0.3, "Medium", "P1")
 
     # ---- REVENUE / ORDERS ----
     if d.get("orders_delta_pct") is not None and d["orders_delta_pct"] < -0.10:
@@ -145,9 +184,9 @@ def generate(cur, prev):
             f"Menu-to-cart {k['m2c_pct']:.0f}% — below 30%.",
             "Rebuild the menu page: photos, clear names, top dishes, combos visible.",
             0, "Medium", "P1")
-    if k["c2o_pct"] > 0 and k["c2o_pct"] < 55:
+    if k["c2o_pct"] > 0 and k["c2o_pct"] < 25:
         add("FU2", "Funnel", "Carts are abandoned at payment",
-            f"Cart-to-order {k['c2o_pct']:.0f}% — below 55%.",
+            f"Cart-to-order {k['c2o_pct']:.0f}% — below the 25% line seen across restaurants.",
             "Remove delivery-fee shock and hidden charges at checkout.",
             0, "Medium", "P1")
 

@@ -114,11 +114,13 @@ cloud kitchen these constants will skew the score, though they won't *break* it
 | AD6 | no ad spend recorded | 0 | [heuristic] |
 | AD7 | ad_dependency > 50% | net_settled×0.2 | [heuristic] |
 | AD8 | ROAS > 10 (attribution warning) | 0 | [heuristic] |
+| AD9 | ad_dep ≥ 60% AND rating ≥ 4.1 AND m2c ≥ 25% AND ROAS ≥ 6 → **cannibalization** (ads credit organic demand) | net_settled×0.15 | [correlation] |
 
 ### Retention / Revenue
 | ID | Condition | Impact calc | Provenance |
 |---|---|---|---|
 | RE6 | repeat% in (0, 40) | net_settled×0.05 | 40% [heuristic] |
+| RE7 | ad_dep ≥ 50% AND repeat% in (0, 45) AND new% ≥ 40% → ads rent customers, no retention built | net_settled×0.08 | [correlation] |
 | RE1 | orders MoM < −10% | aov×orders×0.05 | [heuristic] |
 | RE2 | orders up, AOV down | |aov_delta|×orders×0.7 | [heuristic] |
 | RE3 | AOV < ₹500 | (650−AOV)×orders×0.7 | ₹500/₹650 [corpus] |
@@ -131,6 +133,7 @@ cloud kitchen these constants will skew the score, though they won't *break* it
 | OP3 | rating in (0, 4.2) | 0 | 4.2 [heuristic] |
 | OP4 | FOR accuracy in (0, 90%) | 0 | [heuristic] |
 | OP5 | bad orders > 10% | lost_sales | [heuristic] |
+| OP6 | KPT ≥ 20 min AND bad orders ≥ 10% → slow kitchen drives bad orders | lost_sales×0.5 | [correlation] |
 | OP1 | cancel rate > 2% | aov×cancellations | [heuristic] |
 | OP2 | cancel rate rising MoM | 0 | [heuristic] |
 
@@ -140,12 +143,13 @@ cloud kitchen these constants will skew the score, though they won't *break* it
 | FE1 | ld_exposure > 35% | (exposure−25%)×orders×fee | [heuristic] |
 | FE2 | take_rate > 30% | (take−29%)×subtotal | [heuristic] |
 | FE3 | discount_rate > 2% | subtotal×disc×0.5 | [heuristic] |
+| FE4 | discount_rate ≥ 8% AND repeat% in (0, 45) → discounts not buying loyalty | subtotal×disc×0.3 | [correlation] |
 
 ### Funnel
 | ID | Condition | Impact calc | Provenance |
 |---|---|---|---|
 | FU1 | m2c in (0, 30%) | 0 | [heuristic] |
-| FU2 | c2o in (0, 55%) | 0 | [heuristic] |
+| FU2 | c2o in (0, 25%) | 0 | [correlation] recalibrated from 55% (observed c2o range 16.5–31.8%, median 21.6 — 55% never fired) |
 
 **Generalization risk: MEDIUM.** Every threshold is a hand-set constant. The
 conditions are *reasonable* everywhere (a 2% cancel rate is bad anywhere), but:
@@ -156,6 +160,23 @@ conditions are *reasonable* everywhere (a 2% cancel rate is bad anywhere), but:
    yields 0 and rules like OP3/OP4/FU1/FU2 *never fire* (guarded by `> 0`), but
    health-score dials like Repeat/Rating *fire at 100* when data is missing. That's
    a "false healthy" bias when the funnel is incomplete.
+
+### Correlation-derived rules (added from 9-month corpus analysis)
+
+Added after correlating 15+ features across the 9 valid payout+funnel
+restaurant-months (see `_correlate.py` — rerun with the corpus for full output):
+
+| Finding (correlation) | Rule added | Why it matters |
+|---|---|---|
+| ad_dep ↔ rating +0.68, ad_dep ↔ ROAS +0.60; Palaaram/Kubaba show rating ≥4.1 + m2c ≥25% + ad_dep ≥71% | **AD9 cannibalization** | ads may credit organic demand — holdout test before scaling |
+| ad_dep ≥50% restaurants keep repeat 38–45%, new 39–48% | **RE7 ads rent customers** | no retention built behind ad spend |
+| KPT ↔ bad orders +0.90 | **OP6 slow kitchen** | prep time is a direct lever on bad orders |
+| discount 9–13% → repeat 38–46% vs Lulu 0% discount → repeat 44–45% | **FE4 discounts don't buy loyalty** | blanket promos cost margin without retention |
+| observed c2o range 16.5–31.8% (median 21.6) | **FU2 threshold 55% → 25%** | 55% never fired on real data |
+
+Caveats: n=9 is small and restaurant identity drives some correlations
+(e.g. Palaaram's high take rate vs Lulu's low). New rules are conservative and
+flagged with [correlation] so they can be re-validated as the corpus grows.
 
 ---
 
